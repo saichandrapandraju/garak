@@ -78,7 +78,7 @@ dependencies = [
   "avidtools==0.1.2",
   "stdlibs>=2022.10.9",
   "cmd2==2.4.3",
-  "torch>=2.6.0",
+  "torch-cpu>=2.6.0",
   "sentencepiece>=0.1.99",
   "markdown>=3.4.3",
   "numpy>=1.26.4,<2.0",
