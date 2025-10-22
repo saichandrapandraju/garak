@@ -298,11 +298,12 @@ class GOATAttack(garak.probes.Probe):
                 continue
             target_response_text = r_T[0].text
 
-            # C_T += [r_T]
-            C_T.append(garak.attempt.Turn("assistant", garak.attempt.Message(target_response_text)))
-
             # evaluate jailbreak success for early stopping
             is_jailbreak, reasoning = self._evaluate_jailbreak(target_response_text, goal)
+
+            # C_T += [r_T]
+            notes = { "success": is_jailbreak, "reasoning": reasoning }
+            C_T.append(garak.attempt.Turn("assistant", garak.attempt.Message(target_response_text, notes=notes)))
 
             # set outputs
             r_T[0].notes["success"] = is_jailbreak # created a simple boolean detector (notes.MatchSuccessBool) to re-use this judge evaluation

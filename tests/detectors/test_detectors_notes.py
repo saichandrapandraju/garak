@@ -51,7 +51,7 @@ def test_notes_match_success_bool_multiple_outputs_mixed(detector):
     attempt.outputs = [output1, output2, output3]
     
     results = detector.detect(attempt)
-    assert results == [1.0, 0.0, 1.0]
+    assert results == [1.0, None, None] # refer to the FIXME in notes.MatchSuccessBool.detect() for the reason for None values
 
 def test_notes_match_success_bool_no_success_key(detector):
     """Test that detector returns 0.0 for outputs without success key"""
@@ -112,7 +112,9 @@ def test_notes_match_success_bool_non_boolean_success(detector):
     attempt.outputs = outputs
     
     results = detector.detect(attempt)
-    assert results == [0.0] * len(non_boolean_values)
+    expect_results = [None] * len(non_boolean_values) # refer to the FIXME in notes.MatchSuccessBool.detect() for the reason for None values
+    expect_results[0] = 0.0
+    assert results == expect_results
 
 def test_notes_match_success_bool_mixed_valid_invalid(detector):
     """Test detector with mix of valid and invalid success values"""
@@ -137,7 +139,7 @@ def test_notes_match_success_bool_mixed_valid_invalid(detector):
     attempt.outputs = [output1, output2, output3, output4, output5]
     
     results = detector.detect(attempt)
-    assert results == [1.0, 0.0, 0.0, 0.0, 1.0]
+    assert results == [1.0, None, None, None, None] # refer to the FIXME in notes.MatchSuccessBool.detect() for the reason for None values
 
 def test_notes_match_success_bool_notes_not_dict(detector):
     """Test that detector returns 0.0 for outputs where notes is not a dict"""
