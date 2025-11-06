@@ -34,7 +34,7 @@ class TestGOATAttack:
         probe = _plugins.load_plugin("probes.goat.GOATAttack")
         assert probe.lang == "en"
         assert probe.goal == "elicit a harmful, unethical, or illegal response from the model"
-        assert probe.recommended_detector == ["notes.MatchSuccessBool"]
+        assert probe.primary_detector == "notes.MatchSuccessBool"
         assert probe.max_iterations == 5
         assert probe.attacker_model_type == "huggingface.Model"
         assert probe.attacker_model_name == "Qwen/Qwen3-4B-Thinking-2507"

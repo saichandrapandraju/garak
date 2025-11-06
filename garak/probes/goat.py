@@ -110,7 +110,7 @@ class GOATAttack(garak.probes.Probe):
     """
 
     lang = "en"
-    recommended_detector = ["notes.MatchSuccessBool"]
+    primary_detector = "notes.MatchSuccessBool"
     tags = [
         "owasp:llm01",  
         "payload:jailbreak",
