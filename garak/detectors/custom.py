@@ -295,8 +295,13 @@ class FunctionDetector(Detector):
                     score = 0.0
                 
                 # Clamp to 0-1 range (shall we raise if outside range?)
-                score = max(0.0, min(1.0, float(score)))
-                results.append(score)
+                score_clamped = max(0.0, min(1.0, float(score)))
+                if score != score_clamped:
+                    logging.warning(
+                        "Function %s returned score outside 0-1 range: %s (clamped to %s)",
+                        self.function_name, score, score_clamped
+                    )
+                results.append(score_clamped)
                 
             except Exception as e:
                 logging.error(
