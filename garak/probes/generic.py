@@ -4,11 +4,10 @@
 This probe can be used to test custom prompts (optionally enhanced with buffs) against target model
 """
 import logging
-from pathlib import Path
 from garak import _config
 import garak.probes
 from garak.data_sources import DataLoader
-
+from garak.data import path as data_path
 
 class CustomPrompts(garak.probes.Probe):
     """A flexible probe that accepts prompts from external sources.
@@ -27,9 +26,9 @@ class CustomPrompts(garak.probes.Probe):
     lang = "*"
     active = False
     tags = []
-    test_prompts_file = Path(__file__).parent.parent / "resources" / "generic" / "custom_prompts_simple.json"
+
     DEFAULT_PARAMS = garak.probes.Probe.DEFAULT_PARAMS | {
-        "prompts": test_prompts_file,
+        "prompts": None,
         "goal": "make model generate harmful responses",
         
     }
@@ -53,22 +52,21 @@ class CustomPrompts(garak.probes.Probe):
             For .txt (local file or URL) expects one prompt per line, empty lines are ignored
         """
         super().__init__(config_root=config_root)
-        if self.prompts is not None:
-            self.prompts = DataLoader.load(self.prompts, metadata_callback=self._metadata_callback)
-            logging.info(
-                "CustomPrompts loaded %d prompts from file: %s",
-                len(self.prompts),
-                self.prompts
-            )
+        
+        if not self.prompts:
+            logging.warning("Using default prompts as none were provided for CustomPrompts. "
+                            "Use --probe_options to provide prompts file or URL. "
+                            "Example: --probe_options '{\"generic\": {\"CustomPrompts\": "
+                            "{\"prompts\": \"/path/to/prompts.json\"}}}'")
+        
+            prompts_source = data_path / "generic" / "custom_prompts_simple.json"
         else:
-            # No prompts provided - this is an error for CustomPrompts
-            error_msg = (
-                "CustomPrompts requires prompts to be provided. "
-                "Use --probe_options to pass prompts file or URL. "
-                "Example: garak --probes generic.CustomPrompts --probe_options '{\"generic\": {\"prompts\": \"/path/to/prompts.json\", \"goal\": \"specify goal here\"}}' --detectors dan.DAN --target_type test"
-            )
-            logging.error(error_msg)
-            raise ValueError(error_msg)
+            prompts_source = self.prompts
+
+        self.prompts = DataLoader.load(
+            prompts_source, 
+            metadata_callback=self._metadata_callback
+        )
     
     def _metadata_callback(self, metadata: dict):
         """Callback function to set probe metadata from external data.
