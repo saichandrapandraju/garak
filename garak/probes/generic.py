@@ -6,7 +6,7 @@ This probe can be used to test custom prompts (optionally enhanced with buffs) a
 import logging
 from garak import _config
 import garak.probes
-from garak.data_sources import DataLoader
+from garak.resources.loaders.data_sources import DataLoader
 from garak.data import path as data_path
 
 class CustomPrompts(garak.probes.Probe):

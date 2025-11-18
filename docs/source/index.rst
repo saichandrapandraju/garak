@@ -53,7 +53,6 @@ Check out the :doc:`usage` section for further information, including :doc:`inst
    buffs
    cli
    command
-   data_sources
    detectors
    evaluators
    exception

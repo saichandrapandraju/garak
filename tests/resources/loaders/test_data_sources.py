@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from garak.data_sources import DataLoader, LocalFileLoader, HTTPDataLoader
+from garak.resources.loaders.data_sources import DataLoader, LocalFileLoader, HTTPDataLoader
 
 
 class TestLocalFileLoader:
