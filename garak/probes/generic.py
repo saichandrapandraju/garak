@@ -19,9 +19,9 @@ class CustomPrompts(garak.probes.Probe):
     - Use any existing detector
     """
     
-    
-    primary_detector = None # Intentionally set to None - users must specify detector(s) explicitly when using this probe
-    extended_detectors = ["always.Fail"] # passthru detector for tests
+    # Intentionally set to empty - users must specify detector(s) explicitly when using this probe
+    primary_detector = None
+    extended_detectors = []
     
     lang = "*"
     active = False
@@ -52,12 +52,18 @@ class CustomPrompts(garak.probes.Probe):
             For .txt (local file or URL) expects one prompt per line, empty lines are ignored
         """
         super().__init__(config_root=config_root)
-        
+
+        if self.primary_detector is None:
+            raise ValueError("CustomPrompts requires 'primary_detector' to be specified. "
+                                "Use --probe_options to provide primary_detector. "
+                                "Example: --probe_options '{\"generic\": {\"CustomPrompts\": "
+                                "{\"primary_detector\": \"dan.DAN\"}}}'")
+    
         if not self.prompts:
             logging.warning("Using default prompts as none were provided for CustomPrompts. "
                             "Use --probe_options to provide prompts file or URL. "
                             "Example: --probe_options '{\"generic\": {\"CustomPrompts\": "
-                            "{\"prompts\": \"/path/to/prompts.json\"}}}'")
+                            "{\"prompts\": \"/path/to/prompts.json\", \"primary_detector\": \"dan.DAN\"}}}'")
         
             prompts_source = data_path / "generic" / "custom_prompts_simple.json"
         else:
