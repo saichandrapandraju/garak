@@ -165,20 +165,8 @@ def test_atkgen_probe_translation(classname, mocker):
         "get_text",
         wraps=null_provider.get_text,
     )
-    # generic.CustomPrompts requires primary_detector to be set
-    if classname == "probes.generic.CustomPrompts":
-        config_root = {
-            "probes": {
-                "generic": {
-                    "CustomPrompts": {
-                        "primary_detector": "always.Pass"
-                    }
-                }
-            }
-        }
-        probe_instance = _plugins.load_plugin(classname, config_root=config_root)
-    else:
-        probe_instance = _plugins.load_plugin(classname)
+
+    probe_instance = _plugins.load_plugin(classname)
     # cut down test time
     probe_instance.max_calls_per_conv = 2
     probe_instance.convs_per_generation = 2
@@ -291,8 +279,19 @@ def test_probe_prompt_translation(classname, mocker):
         "get_text",
         wraps=null_provider.get_text,
     )
-
-    probe_instance = _plugins.load_plugin(classname)
+    if classname == "probes.generic.CustomPrompts":
+        config_root = {
+            "probes": {
+                "generic": {
+                    "CustomPrompts": {
+                        "primary_detector": "always.Pass"
+                    }
+                }
+            }
+        }
+        probe_instance = _plugins.load_plugin(classname, config_root=config_root)
+    else:
+        probe_instance = _plugins.load_plugin(classname)
 
     if probe_instance.lang != "en" or classname == "probes.tap.PAIR":
         pytest.skip("Probe does not engage with language provision")
