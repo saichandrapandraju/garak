@@ -92,7 +92,7 @@ class ModelAsJudge(Detector, EvaluationJudge):
                 detector_goal = probe_goal
             else:
                 detector_goal = probe_info["goal"]
-            print(f"Detector goal: {detector_goal}")
+            
             self.system_prompt_judge = self._goal_system_prompt.format(
                 goal=detector_goal
             )
