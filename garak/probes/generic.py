@@ -4,11 +4,10 @@
 This probe can be used to test custom prompts (optionally enhanced with buffs) against target model
 """
 import logging
-from pathlib import Path
 from garak import _config
 import garak.probes
-from garak.data_sources import DataLoader
-
+from garak.resources.loaders.data_sources import DataLoader
+from garak.data import path as data_path
 
 class CustomPrompts(garak.probes.Probe):
     """A flexible probe that accepts prompts from external sources.
@@ -20,55 +19,72 @@ class CustomPrompts(garak.probes.Probe):
     - Use any existing detector
     """
     
-    
-    primary_detector = None # Intentionally set to None - users must specify detector(s) explicitly when using this probe
-    extended_detectors = ["always.Fail"] # passthru detector for tests
+    # Intentionally set to None - will be set to default in __init__ if not configured
+    primary_detector = None
+    extended_detectors = []
     
     lang = "*"
     active = False
     tags = []
-    test_prompts_file = Path(__file__).parent.parent / "resources" / "generic" / "custom_prompts_simple.json"
+
     DEFAULT_PARAMS = garak.probes.Probe.DEFAULT_PARAMS | {
-        "prompts": test_prompts_file,
+        "prompts": None,
         "goal": "make model generate harmful responses",
         
     }
     
-    def __init__(
-        self,
-        config_root=_config
-    ):
+    def __init__(self, config_root=_config):
         """Initialize CustomPrompts with custom prompts.
         
+        Prompts and configuration are loaded from config_root via --probe_options.
+        After _load_config(), validates that prompts were provided and sets
+        primary_detector to default if not configured.
+        
         Args:
-            prompts: Custom prompts to test. Can be a string or path to file containing prompts (one per line for .txt, or JSON with "prompts" key).
             config_root: Configuration root object (default: global _config)
             
         Raises:
-            ValueError: If prompts is not provided, or if file format is unsupported.
-            FileNotFoundError: If prompts file doesn't exist.
+            ValueError: If prompts not provided after config loading
+            FileNotFoundError: If prompts file doesn't exist
         
-        Note:
-            For .json (local file or URL) expects array of strings or {"prompts": [...], "goal": "...", "description": "...", "tags": ["..."]} object (goal, description, and tags are optional)
-            For .txt (local file or URL) expects one prompt per line, empty lines are ignored
+        Configuration (via --probe_options):
+            {
+              "generic": {
+                "CustomPrompts": {
+                  "prompts": "/path/to/prompts.json",  # Required
+                  "goal": "custom goal",                # Optional
+                  "primary_detector": "dan.DAN"         # Optional, defaults to always.Pass
+                }
+              }
+            }
+        
+        Prompts format:
+            - .txt: one prompt per line
+            - .json: array ["p1", "p2"] OR object {"prompts": [...], "goal": "..."}
+            - HTTP(S) URLs supported
         """
+        # Load config first (sets self.prompts, self.primary_detector, etc.)
         super().__init__(config_root=config_root)
-        if self.prompts is not None:
-            self.prompts = DataLoader.load(self.prompts, metadata_callback=self._metadata_callback)
-            logging.info(
-                "CustomPrompts loaded %d prompts from file: %s",
-                len(self.prompts),
-                self.prompts
-            )
+
+        if self.primary_detector is None:
+            raise ValueError("CustomPrompts requires 'primary_detector' to be specified. "
+                             "Use --probe_options to provide primary_detector. "
+                             "Example: --probe_options '{\"generic\": {\"CustomPrompts\": "
+                             "{\"primary_detector\": \"dan.DAN\"}}}'")
+
+        if not self.prompts:
+            logging.warning("No prompts provided for CustomPrompts. Using default prompts. "
+                            "Use --probe_options to provide prompts file or URL. "
+                            "Example: --probe_options '{\"generic\": {\"CustomPrompts\": "
+                            "{\"prompts\": \"/path/to/prompts.json\"}}}'")
+            prompts_source = data_path / "generic" / "custom_prompts_simple.json"
         else:
-            # No prompts provided - this is an error for CustomPrompts
-            error_msg = (
-                "CustomPrompts requires prompts to be provided. "
-                "Use --probe_options to pass prompts file or URL. "
-                "Example: garak --probes generic.CustomPrompts --probe_options '{\"generic\": {\"prompts\": \"/path/to/prompts.json\", \"goal\": \"specify goal here\"}}' --detectors dan.DAN --target_type test"
-            )
-            logging.error(error_msg)
-            raise ValueError(error_msg)
+            prompts_source = self.prompts
+
+        self.prompts = DataLoader.load(
+            prompts_source, 
+            metadata_callback=self._metadata_callback
+        )
     
     def _metadata_callback(self, metadata: dict):
         """Callback function to set probe metadata from external data.
