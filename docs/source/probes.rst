@@ -16,6 +16,7 @@ For a detailed oversight into how a probe operates, see :doc:`garak.probes.base`
    garak.probes.audio
    garak.probes.av_spam_scanning
    garak.probes.continuation
+   garak.probes.custom
    garak.probes.dan
    garak.probes.divergence
    garak.probes.doctor
@@ -25,7 +26,6 @@ For a detailed oversight into how a probe operates, see :doc:`garak.probes.base`
    garak.probes.exploitation
    garak.probes.fileformats
    garak.probes.fitd
-   garak.probes.generic
    garak.probes.glitch
    garak.probes.goodside
    garak.probes.grandma
