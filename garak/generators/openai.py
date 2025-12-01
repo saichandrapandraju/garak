@@ -5,7 +5,8 @@ an environment variable documented in the selected generator. Put the name of th
 model you want in either the --target_name command line parameter, or
 pass it as an argument to the Generator constructor.
 
-sources:
+Sources:
+
 * https://platform.openai.com/docs/models/model-endpoint-compatibility
 * https://platform.openai.com/docs/model-index-for-researchers
 """

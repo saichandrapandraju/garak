@@ -7,6 +7,7 @@ variable called COHERE_API_KEY to your Cohere API key, for this generator.
 
 NOTE: As of Cohere v5.0.0+, the generate API is legacy and chat API is recommended.
 This implementation follows Cohere's official migration guide:
+
 - For v1 API: Uses cohere.Client() to maintain full backward compatibility
 - For v2 API: Uses cohere.ClientV2() for the recommended chat interface
 """
