@@ -1,9 +1,20 @@
-"""PromptInject
+"""**PromptInject**
+
+Basic prompt injections, including plaintext malicious commands into requests
+for innocuous information.
+
+Probes in this module should specifically implement parts of the PromptInject
+framework.
 
 Uses the PromptInject framework, https://openreview.net/forum?id=qiaRo_7Zmug,
 to probe a system. A subset of the attacks is implemented here. The default
 is to use a selection of that subset, because even the subset corresponds to
 thousands of requests by default.
+
+Further info:
+
+* https://openreview.net/forum?id=qiaRo_7Zmug
+
 """
 
 import random
