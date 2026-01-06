@@ -282,9 +282,6 @@ class OpenAICompatible(Generator):
                 raise garak.exception.GeneratorBackoffTrigger from e
             else:
                 raise e
-        
-        if isinstance(response, str) and response: # this is for streaming content which is a concatenated string of chunks
-            return [Message(response)]
 
         if not hasattr(response, "choices"):
             logging.debug(
