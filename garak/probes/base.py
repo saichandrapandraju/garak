@@ -14,7 +14,7 @@ import json
 import logging
 from collections.abc import Iterable
 import random
-from typing import Iterable, Union, List
+from typing import Iterable, Union
 
 from colorama import Fore, Style
 import tqdm
@@ -57,7 +57,7 @@ class Probe(Configurable):
     modality: dict = {"in": {"text"}}
     # what tier is this probe? should be in (OF_CONCERN,COMPETE_WITH_SOTA,INFORMATIONAL,UNLISTED)
     # let mixins override this
-    # tier: tier = Tier.UNLISTED
+    # tier: Tier = Tier.UNLISTED
     tier: Tier = Tier.UNLISTED
 
     DEFAULT_PARAMS = {}
@@ -104,6 +104,8 @@ class Probe(Configurable):
             )
 
         logging.info(f"probe init: {self}")
+        self._load_deps()
+
         if "description" not in dir(self):
             if self.__doc__:
                 self.description = self.__doc__.split("\n", maxsplit=1)[0]
@@ -206,7 +208,11 @@ class Probe(Configurable):
         return attempt
 
     def _mint_attempt(
-        self, prompt=None, seq=None, notes=None, lang="*"
+        self,
+        prompt: str | garak.attempt.Message | garak.attempt.Conversation | None = None,
+        seq=None,
+        notes=None,
+        lang="*",
     ) -> garak.attempt.Attempt:
         """function for creating a new attempt given a prompt"""
         turns = []
@@ -258,7 +264,6 @@ class Probe(Configurable):
             seq=seq,
             prompt=prompt,
             notes=notes,
-            lang=lang,
         )
 
         new_attempt = self._attempt_prestore_hook(new_attempt, seq)
@@ -297,6 +302,11 @@ class Probe(Configurable):
         this_attempt.outputs = self.generator.generate(
             this_attempt.prompt, generations_this_call=self.generations
         )
+        if len(this_attempt.outputs) != self.generations:
+            raise garak.exception.BadGeneratorException(
+                "Generator did not return the requested number of responses (asked for %i got %i). supports_multiple_generations may be set incorrectly."
+                % (self.generations, len(this_attempt.outputs))
+            )
         if self.post_buff_hook:
             this_attempt = self._postprocess_buff(this_attempt)
         this_attempt = self._postprocess_hook(this_attempt)
@@ -379,7 +389,7 @@ class Probe(Configurable):
             colour=f"#{garak.resources.theme.LANGPROVIDER_RGB}",
             desc="Preparing prompts",
         )
-        if isinstance(prompts[0], str):
+        if isinstance(prompts[0], str):  # self.prompts can be strings
             localized_prompts = self.langprovider.get_text(
                 prompts, notify_callback=preparation_bar.update
             )
@@ -593,11 +603,21 @@ class TreeSearchProbe(Probe):
 
             all_completed_attempts += attempts_completed
 
-            node_results = [
-                1.0 if s > self.per_generation_threshold else 0 for s in node_results
-            ]
-            if len(node_results) > 0:
-                mean_score = sum(node_results) / len(node_results)
+            updated_results = []
+            for s in node_results:
+                if s is None:
+                    updated_results.append(None)
+                elif s > self.per_generation_threshold:
+                    updated_results.append(1.0)
+                else:
+                    updated_results.append(0.0)
+            node_results = updated_results
+
+            non_none_node_results = list(
+                filter(lambda x: x is not None, updated_results)
+            )
+            if len(non_none_node_results) > 0:
+                mean_score = sum(non_none_node_results) / len(non_none_node_results)
             else:
                 mean_score = 0
             parent = self._get_node_parent(current_node)

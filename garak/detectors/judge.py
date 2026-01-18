@@ -1,11 +1,13 @@
 # SPDX-FileCopyrightText: Portions Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+""" Detectors that use a model as a judge, providing target output and requesting evaluation. """
+
 from typing import List
 
 from garak import _config, _plugins
 from garak.resources.red_team.evaluation import EvaluationJudge, get_token_limit
-from garak.attempt import Attempt
+from garak.attempt import Attempt, Message
 from garak.detectors.base import Detector
 from garak.exception import GarakException, BadGeneratorException
 from garak.generators.openai import OpenAICompatible
@@ -14,7 +16,7 @@ from garak.generators.openai import OpenAICompatible
 class ModelAsJudge(Detector, EvaluationJudge):
     """Generic configurable detector to utilize a generator as a judge
 
-    For system prompt interactions this detector relies on the [FastChat](https://github.com/lm-sys/fastchat) package
+    For system prompt interactions this detector relies on the `FastChat <https://github.com/lm-sys/fastchat>`_ package
     and is limited to chat models with conversation template support compatible with OpenAI chat.
     """
 
@@ -147,9 +149,7 @@ class Refusal(ModelAsJudge):
 
     def detect(self, attempt: Attempt) -> List[float | None]:
         # these need to eval individually of the methods called need to support `None`
-        return [
-            self.on_topic_score([o.text])[0] if o else None for o in attempt.outputs
-        ]
+        return [self.on_topic_score([o])[0] if o else None for o in attempt.outputs]
 
 
 class RefusalOnlyAdversarial(Refusal):

@@ -1,5 +1,6 @@
 import importlib
 from pathlib import Path
+import re
 import yaml
 
 import pytest
@@ -16,6 +17,13 @@ for top_path in TOP_PATHS:
     ]
 
 ROOT_MODULES = list(Path("garak").glob("*py"))
+
+MARKDOWN_CANARIES = set(
+    [
+        re.compile(r"(^|[^`!])\!?\[.+\]\((http|java).+\)"),  #  [link](http://link)
+        re.compile(r"```"),  #  ```   (code block)
+    ]
+)
 
 
 @pytest.mark.parametrize("category", TOP_PATHS)
@@ -143,18 +151,42 @@ buffs = [classname for (classname, active) in _plugins.enumerate_plugins("buffs"
 # evaluators = [
 #    classname for (classname, active) in _plugins.enumerate_plugins("evaluators")
 # ]
-plugins = probes + detectors + generators + buffs
+plugins = sorted(probes + detectors + generators + buffs)
 
 
 @pytest.mark.parametrize("plugin_name", plugins)
-def test_check_docstring(plugin_name: str):
+def test_check_plugin_class_docstring(plugin_name: str):
     plugin_name_parts = plugin_name.split(".")
     module_name = "garak." + ".".join(plugin_name_parts[:-1])
     class_name = plugin_name_parts[-1]
     mod = importlib.import_module(module_name)
     doc = getattr(getattr(mod, class_name), "__doc__")
-    assert isinstance(doc, str), "All plugins must have docstrings"
-    assert len(doc) > 0, "Plugin docstrings must not be empty"
+    assert isinstance(doc, str), "All plugin classes must have docstrings"
+    assert len(doc) > 0, "Plugin class docstrings must not be empty"
+    for canary in MARKDOWN_CANARIES:
+        canary_match = canary.search(doc, re.I)
+        assert (
+            canary_match is None
+        ), f"Markdown in docstring: '{canary_match.group().strip()}' - use ReStructured Text for garak docs"
+
+
+PLUGIN_GROUPS = sorted(
+    list(set([".".join(plugin_name.split(".")[:2]) for plugin_name in plugins]))
+)
+
+
+@pytest.mark.parametrize("plugin_group", PLUGIN_GROUPS)
+def test_check_plugin_module_docstring(plugin_group: str):
+    module_name = "garak." + plugin_group
+    mod = importlib.import_module(module_name)
+    doc = getattr(mod, "__doc__")
+    assert isinstance(doc, str), "All plugin groups/modules must have docstrings"
+    assert len(doc) > 0, "Plugin group/module docstrings must not be empty"
+    for canary in MARKDOWN_CANARIES:
+        canary_match = canary.search(doc, re.I)
+        assert (
+            canary_match is None
+        ), f"Markdown in docstring: '{canary_match.group().strip()}' - use ReStructured Text for garak docs"
 
 
 @pytest.fixture(scope="session")
@@ -212,3 +244,16 @@ def test_doc_src_extensions(doc_source_entry):
             assert doc_source_entry.suffix == ".rst", (
                 "Doc entry %s should be a .rst file" % doc_source_entry
             )
+
+
+RST_FILES = DOC_SOURCE.glob("*rst")
+
+
+@pytest.mark.parametrize("rst_file", RST_FILES)
+def test_doc_src_no_markdown(rst_file):
+    rst_file_content = open(rst_file, "r", encoding="utf-8").read()
+    for canary in MARKDOWN_CANARIES:
+        canary_match = canary.search(rst_file_content, re.I)
+        assert (
+            canary_match is None
+        ), f"Markdown-like content in rst: {result.group().strip()} use ReStructured Text for garak docs - Markdown won't render"

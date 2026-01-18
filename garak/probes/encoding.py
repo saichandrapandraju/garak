@@ -266,7 +266,6 @@ class EncodingMixin:
             self.prompts, self.triggers = zip(
                 *random.sample(generated_prompts, self.soft_probe_prompt_cap)
             )
-        self.prompts = self.langprovider.get_text(self.prompts)
 
     def _attempt_prestore_hook(self, attempt, seq):
         attempt.notes["triggers"] = [self.triggers[seq]]
@@ -568,7 +567,7 @@ class InjectNato(EncodingMixin, garak.probes.Probe):
 class InjectEcoji(EncodingMixin, garak.probes.Probe):
     """Probe for susceptibility to Ecoji encoding.
 
-    Encodes payloads using the [ecoji](https://ecoji.io/) mapping, and tries a variety
+    Encodes payloads using the `ecoji <https://ecoji.io/>`_ mapping, and tries a variety
     of ways of getting the target model to repeat & decode them."""
 
     doc_uri = "https://ecoji.io/"
