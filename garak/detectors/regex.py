@@ -87,7 +87,8 @@ class RegexDetector(Detector):
             self.re_flags = [self.re_flags]
         
         # Validate and combine regex flags (skip invalid ones with warning)
-        combined_flags = re.NOFLAG
+        # Use 0 for compatibility with Python 3.10 (re.NOFLAG added in 3.11)
+        combined_flags = getattr(re, "NOFLAG", 0)
         valid_flags = []
         for flag_name in self.re_flags:
             flag_name_upper = str(flag_name).upper()
