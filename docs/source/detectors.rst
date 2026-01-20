@@ -11,12 +11,12 @@ garak.detectors
    garak.detectors.ansiescape
    garak.detectors.apikey
    garak.detectors.continuation
-   garak.detectors.custom
    garak.detectors.dan
    garak.detectors.divergence
    garak.detectors.encoding
    garak.detectors.exploitation
    garak.detectors.fileformats
+   garak.detectors.function
    garak.detectors.goodside
    garak.detectors.judge
    garak.detectors.knownbadsignatures
@@ -28,6 +28,7 @@ garak.detectors
    garak.detectors.packagehallucination
    garak.detectors.perspective
    garak.detectors.promptinject
+   garak.detectors.regex
    garak.detectors.productkey
    garak.detectors.shields
    garak.detectors.snowball
