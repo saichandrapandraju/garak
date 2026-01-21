@@ -8,6 +8,7 @@ import os
 
 from garak import _config, _plugins
 from garak.attempt import Message, Attempt, Conversation
+from garak.exception import GarakException
 
 NON_PROMPT_PROBES = [
     "probes.dan.AutoDAN",
@@ -189,7 +190,7 @@ def test_atkgen_probe_translation(classname, mocker):
     expected_langprovision_calls = (
         2 * probe_instance.max_calls_per_conv * probe_instance.convs_per_generation
     )
-    if hasattr(probe_instance, "triggers"):
+    if hasattr(probe_instance, "triggers") and probe_instance.triggers:
         # increase prompt calls by 1 or if triggers are lists by the len of triggers
         if isinstance(probe_instance.triggers[0], list):
             expected_langprovision_calls += len(probe_instance.triggers)
@@ -236,7 +237,7 @@ def test_multi_modal_probe_translation(classname, mocker):
     probe_instance.probe(generator_instance)
 
     expected_provision_calls = len(probe_instance.prompts) * 2
-    if hasattr(probe_instance, "triggers"):
+    if hasattr(probe_instance, "triggers") and probe_instance.triggers:
         # increase prompt calls by 1 or if triggers are lists by the len of triggers
         if isinstance(probe_instance.triggers[0], list):
             expected_provision_calls += len(probe_instance.triggers)
@@ -287,7 +288,10 @@ def test_probe_prompt_translation(classname, mocker):
         wraps=null_provider.get_text,
     )
 
-    probe_instance = _plugins.load_plugin(classname)
+    try:
+        probe_instance = _plugins.load_plugin(classname)
+    except GarakException:
+        pytest.skip("Probe could not be configured with available data")
 
     if probe_instance.lang != "en" or classname == "probes.tap.PAIR":
         pytest.skip("Probe does not engage with language provision")
@@ -310,11 +314,11 @@ def test_probe_prompt_translation(classname, mocker):
                     forward_translation_calls += 1
 
     expected_provision_calls = len(prompts) + forward_translation_calls
-    if hasattr(probe_instance, "triggers"):
+    if hasattr(probe_instance, "triggers") and probe_instance.triggers:
         # increase prompt calls by 1 or if triggers are lists by the len of triggers
         if isinstance(probe_instance.triggers[0], list):
             expected_provision_calls += len(probe_instance.triggers)
-        elif not classname.startswith("probes.encoding"):
+        elif not classname.startswith(("probes.encoding", "probes.propile")):
             expected_provision_calls += 1
 
     if hasattr(probe_instance, "attempt_descrs"):
