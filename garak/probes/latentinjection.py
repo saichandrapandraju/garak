@@ -5,7 +5,7 @@
 
 Probes to test prompt injections buried in other contexts, like a resume or financial report.
 
-This module is for probes that bury a prompt injection in another context. 
+This module is for probes that bury a prompt injection in another context.
 All probes should implement the ``LatentInjectionMixin``.
 
 """

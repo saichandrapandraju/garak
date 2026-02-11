@@ -9,7 +9,6 @@ import os
 from garak import _config, _plugins
 from garak.attempt import Message, Attempt, Conversation
 
-
 NON_PROMPT_PROBES = [
     "probes.dan.AutoDAN",
     "probes.tap.TAP",
@@ -38,7 +37,7 @@ openai_api_key_missing = not os.getenv("OPENAI_API_KEY")
 
 
 @pytest.fixture(autouse=True)
-def probe_pre_req(classname):
+def probe_pre_req(classname, request):
     # this sets up config for probes that access _config still
     _config.run.seed = 42
     local_config_path = str(
@@ -57,6 +56,11 @@ def probe_pre_req(classname):
     # since this does not go through cli generations must be set
     _, module, klass = classname.split(".")
     _config.plugins.probes[module][klass]["generations"] = 1
+
+    def close_report():
+        temp_report_file.close()
+
+    request.addfinalizer(close_report)
 
 
 RESPONSE_SAMPLES = [
