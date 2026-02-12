@@ -116,12 +116,8 @@ def tbsa_json_filenames(request) -> None:
 
 
 def test_stable_hash_different_content(tbsa_json_filenames):
-    cli_args_0 = (
-        f"-r tests/_assets/tbsa_digest_0.json -j {tbsa_json_filenames[0]} -q".split()
-    )
-    cli_args_1 = (
-        f"-r tests/_assets/tbsa_digest_1.json -j {tbsa_json_filenames[1]} -q".split()
-    )
+    cli_args_0 = f"-r tests/_assets/analyze/tbsa_digest_0.json -j {tbsa_json_filenames[0]} -q".split()
+    cli_args_1 = f"-r tests/_assets/analyze/tbsa_digest_1.json -j {tbsa_json_filenames[1]} -q".split()
     garak.analyze.tbsa.main(cli_args_0)
     garak.analyze.tbsa.main(cli_args_1)
 
