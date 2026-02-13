@@ -107,6 +107,8 @@ class GOATAttack(garak.probes.IterativeProbe):
         # Load attack goals
         self.attack_goals = self._get_attack_goals()
 
+        # load attacker early to validate probe configuration values
+        self._load_attacker()
         logging.info(
             f"goat.GOATAttack: Initialized with {len(self.attack_goals)} goals, "
             f"max_calls_per_conv={self.max_calls_per_conv}, end_condition={self.end_condition}"
