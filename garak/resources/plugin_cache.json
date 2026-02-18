@@ -290,7 +290,7 @@
         "max_ascii_variants": 95,
         "follow_prompt_cap": true
       },
-      "active": false,
+      "active": true,
       "doc_uri": "https://arxiv.org/abs/2106.09898",
       "extended_detectors": [],
       "extra_dependency_names": [],
@@ -309,7 +309,7 @@
         "payload:jailbreak"
       ],
       "tier": 2,
-      "mod_time": "2026-02-02 14:10:11 +0000"
+      "mod_time": "2026-02-18 08:01:03 +0000"
     },
     "probes.base.IterativeProbe": {
       "description": "",
@@ -4305,7 +4305,7 @@
         ],
         "n_replacements": 2
       },
-      "active": false,
+      "active": true,
       "doc_uri": "https://aclanthology.org/2025.findings-acl.100.pdf",
       "extended_detectors": [],
       "extra_dependency_names": [],
@@ -4326,7 +4326,7 @@
         "payload:jailbreak"
       ],
       "tier": 2,
-      "mod_time": "2025-11-12 08:34:39 +0000"
+      "mod_time": "2026-02-18 08:01:03 +0000"
     },
     "probes.smuggling.FunctionMasking": {
       "description": "FunctionMasking probe",
