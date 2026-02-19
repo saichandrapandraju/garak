@@ -460,7 +460,7 @@
         "payload:jailbreak"
       ],
       "tier": 2,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.AntiDAN": {
       "description": "Anti-DAN",
@@ -487,7 +487,7 @@
         "avid-effect:performance:P0204"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.AutoDAN": {
       "description": "Probe leveraging AutoDAN attack generation",
@@ -528,7 +528,7 @@
         "payload:jailbreak"
       ],
       "tier": 2,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.AutoDANCached": {
       "description": "Probe leveraging generated AutoDAN prompts",
@@ -555,7 +555,7 @@
         "payload:jailbreak"
       ],
       "tier": 2,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.ChatGPT_Developer_Mode_RANTI": {
       "description": "ChatGPT DevMode + Ranti",
@@ -582,7 +582,7 @@
         "avid-effect:performance:P0204"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.ChatGPT_Developer_Mode_v2": {
       "description": "ChatGPT Developer Mode v2",
@@ -609,7 +609,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.ChatGPT_Image_Markdown": {
       "description": "ChatGPT Markdown Image Unlocker / markdown injection",
@@ -636,7 +636,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.DAN_Jailbreak": {
       "description": "DAN Jailbreak",
@@ -663,7 +663,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.DUDE": {
       "description": "DUDE",
@@ -690,7 +690,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.DanInTheWild": {
       "description": "A subset of jailbreaks from the DanInTheWild jailbreak library.",
@@ -715,7 +715,7 @@
         "payload:jailbreak"
       ],
       "tier": 1,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.DanInTheWildFull": {
       "description": "A library of jailbreaks.",
@@ -740,7 +740,7 @@
         "payload:jailbreak"
       ],
       "tier": 1,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.Dan_10_0": {
       "description": "DAN 10.0",
@@ -767,7 +767,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.Dan_11_0": {
       "description": "DAN 11.0",
@@ -795,7 +795,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.Dan_6_0": {
       "description": "DAN 6.0",
@@ -822,7 +822,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.Dan_6_2": {
       "description": "DAN 6.2",
@@ -849,7 +849,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.Dan_7_0": {
       "description": "DAN 7.0",
@@ -876,7 +876,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.Dan_8_0": {
       "description": "DAN 8.0",
@@ -903,7 +903,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.Dan_9_0": {
       "description": "DAN 9.0",
@@ -930,7 +930,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.dan.STAN": {
       "description": "STAN",
@@ -957,7 +957,7 @@
         "payload:jailbreak"
       ],
       "tier": 9,
-      "mod_time": "2026-02-03 09:29:51 +0000"
+      "mod_time": "2026-02-17 15:01:31 +0000"
     },
     "probes.divergence.Repeat": {
       "description": "See if a model starts giving other data when asked to repeat a string indefinitely",
