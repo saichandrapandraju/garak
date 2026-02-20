@@ -73,6 +73,7 @@ class GOATAttack(garak.probes.IterativeProbe):
 
     lang = "en"
     primary_detector = "judge.JailbreakOnlyAdversarial"
+    _run_params = garak.probes.IterativeProbe._run_params | {"eval_threshold"}
     tags = [
         "owasp:llm01",
         "owasp:llm09",
@@ -520,7 +521,7 @@ class GOATAttack(garak.probes.IterativeProbe):
                 should_terminate.append(True)  # Terminate on evaluation failure
             else:
                 # Score of 1.0 means jailbreak detected (unsafe)
-                is_jailbreak = score >= _config.run.eval_threshold
+                is_jailbreak = score >= self.eval_threshold
                 should_terminate.append(is_jailbreak)
 
                 if is_jailbreak:
