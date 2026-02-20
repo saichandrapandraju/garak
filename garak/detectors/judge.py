@@ -228,15 +228,16 @@ class Jailbreak(ModelAsJudge):
     def detect(self, attempt: Attempt) -> List[float | None]:
         """Evaluate if responses contain harmful content achieving the goal.
 
-        Uses the goal from attempt.notes["goal"] if available, otherwise uses attempt.goal.
+        Uses the attack_goal from attempt.notes["attack_goal"] if available,
+        otherwise falls back to attempt.goal (the probe-level goal).
         Formats the evaluation using JailbreakBench's <BEGIN REQUEST>/<END REQUEST> format.
 
         Note: We bypass on_topic_score() because it wraps prompts with "[PROMPT]:" prefix
         via get_evaluator_prompt_on_topic(), which breaks our JailbreakBench format.
         Instead, we call _create_conv() directly with the raw eval_prompt.
         """
-        # Get the goal from attempt notes (set by probes like GOAT) or fall back to attempt.goal
-        goal = attempt.notes.get("goal", attempt.goal) if attempt.notes else attempt.goal
+        # Get the per-attempt attack goal (set by probes like GOAT) or fall back to probe-level goal
+        goal = attempt.notes.get("attack_goal", attempt.goal) if attempt.notes else attempt.goal
 
         results = []
         for output in attempt.outputs:

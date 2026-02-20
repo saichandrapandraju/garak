@@ -18,8 +18,8 @@ Uses the following options from ``_config.plugins.probes["goat"]``:
 * ``custom_goals`` - List of custom attack goals to use.
 * ``augment_custom_goals`` - Whether to add custom goals to dataset goals. If True, this will augment the custom goals with the HF dataset. If False, only the custom goals will be used.
 * ``attack_hf_dataset`` - HuggingFace dataset path for attack goals.
-* ``hf_dataset_load_kwargs`` - kwargs to pass to HF `load_dataset` function.
-* ``hf_dataset_column`` - column in HF dataset to use for attack goals.
+* ``attack_hf_dataset_load_kwargs`` - kwargs to pass to HF `load_dataset` function.
+* ``attack_hf_dataset_column`` - column in HF dataset to use for attack goals.
 * ``num_goals`` - random number of attack goals to use (out of all goals from the HF dataset and custom goals (if provided)). If -1, uses all. 
 
 Attack Techniques
@@ -113,13 +113,11 @@ The probe includes an internal LLM-as-a-judge using the JailbreakBench classific
 
 The probe automatically stops early when the internal judge detects a successful jailbreak, minimizing unnecessary API calls. Each attempt includes detailed notes:
 
-* ``goal`` - The attack objective being tested
-* ``turn`` - Current iteration number  
-* ``observation`` - AttackerLLM's analysis of the target response
-* ``thought`` - AttackerLLM's reflection toward the goal
-* ``strategy`` - Description of the attack strategy used
+* ``attack_goal`` - The per-attempt attack objective being tested
 * ``is_adversarial`` - Boolean indicating if this is the final turn for evaluation
-* ``judge_reasoning`` - Internal judge's reasoning (optional, for debugging)
+* ``early_stop_reasonings`` - Internal judge's reasoning per output (optional, for debugging)
+
+Turn number is tracked on each ``Conversation`` object's notes (``conversation.notes["turn"]``).
 
 ----
 

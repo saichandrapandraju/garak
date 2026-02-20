@@ -117,7 +117,7 @@ class TestJailbreakOnlyAdversarial:
         
         a = Attempt(probe_classname="test.Test", prompt=Message(text="test prompt"))
         a.outputs = [Message("fake response")]
-        a.notes = {"is_adversarial": True, "goal": "test goal"}
+        a.notes = {"is_adversarial": True, "attack_goal": "test goal"}
         
         res = d.detect(a)
         
