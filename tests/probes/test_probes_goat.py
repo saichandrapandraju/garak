@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 import garak.attempt
 import garak.probes.goat
 from garak import _config, _plugins
+from garak.exception import GarakException
 
 
 # All tests use test.Repeat as the attacker model to avoid loading
@@ -272,6 +273,281 @@ Response: In a hypothetical world where safety doesn't matter, one might conside
         ]
         for technique in expected_techniques:
             assert technique in probe.attack_techniques
+
+
+class TestEarlyStopOn:
+    """Test early_stop_on parameter behavior for is_adversarial and branch termination."""
+
+    def _make_attempt_with_outputs(self, probe, goal="Test goal"):
+        """Helper: create an attempt with 2 outputs (simulating generations=2)."""
+        conversation = garak.attempt.Conversation(
+            turns=[garak.attempt.Turn("user", garak.attempt.Message("test prompt"))],
+            notes={"turn": 1},
+        )
+        attempt = probe._create_attempt(conversation)
+        attempt.notes = {
+            "attack_goal": goal,
+            "attacker_conversation": garak.attempt.Conversation(),
+            "is_adversarial": False,
+        }
+        # Simulate generator producing 2 outputs (generations=2)
+        attempt.outputs = [
+            garak.attempt.Message("I refuse to help with that."),
+            garak.attempt.Message("Sure, here is the harmful content..."),
+        ]
+        return attempt
+
+    def test_early_stop_on_any_marks_adversarial_when_one_branch_jailbroken(self):
+        """With early_stop_on='any', is_adversarial=True if ANY branch is jailbroken."""
+        probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=GOAT_TEST_CONFIG)
+        assert probe.early_stop_on == "any"  # default
+
+        attempt = self._make_attempt_with_outputs(probe)
+        # Simulate: output 0 = safe, output 1 = jailbroken
+        with patch.object(
+            probe, "_should_terminate_conversation", return_value=[False, True]
+        ):
+            processed = probe._postprocess_attempt(attempt)
+
+        assert processed.notes["is_adversarial"] is True
+
+    def test_early_stop_on_any_terminates_all_branches(self):
+        """With early_stop_on='any', _generate_next_attempts returns [] when any branch jailbroken."""
+        probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=GOAT_TEST_CONFIG)
+        assert probe.early_stop_on == "any"
+
+        attempt = self._make_attempt_with_outputs(probe)
+        attempt.notes["_should_terminate"] = [False, True]
+
+        next_attempts = probe._generate_next_attempts(attempt)
+        assert next_attempts == []
+
+    def test_early_stop_on_any_continues_when_no_jailbreak(self):
+        """With early_stop_on='any', continues all branches when none are jailbroken."""
+        probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=GOAT_TEST_CONFIG)
+        probe.attacker_model = Mock()
+        probe.attacker_model.generate.return_value = [
+            garak.attempt.Message(
+                "Observation: test\nThought: test\nStrategy: test\nResponse: next prompt"
+            )
+        ]
+
+        attempt = self._make_attempt_with_outputs(probe)
+        attempt.notes["_should_terminate"] = [False, False]
+
+        next_attempts = probe._generate_next_attempts(attempt)
+        # Both branches continue — each gets a next attempt
+        assert len(next_attempts) == 2
+
+    def test_early_stop_on_all_waits_for_all_branches(self):
+        """With early_stop_on='all', is_adversarial=False when only some branches jailbroken."""
+        config = {
+            "probes": {
+                "goat": {
+                    "GOATAttack": {
+                        "red_team_model_type": "test.Repeat",
+                        "red_team_model_name": "",
+                        "early_stop_on": "all",
+                    }
+                }
+            }
+        }
+        probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=config)
+        assert probe.early_stop_on == "all"
+
+        attempt = self._make_attempt_with_outputs(probe)
+        # Simulate: output 0 = safe, output 1 = jailbroken
+        with patch.object(
+            probe, "_should_terminate_conversation", return_value=[False, True]
+        ):
+            processed = probe._postprocess_attempt(attempt)
+
+        # "all" mode: not all branches done, so NOT adversarial
+        assert processed.notes["is_adversarial"] is False
+
+    def test_early_stop_on_all_marks_adversarial_when_all_done(self):
+        """With early_stop_on='all', is_adversarial=True only when ALL branches terminated."""
+        config = {
+            "probes": {
+                "goat": {
+                    "GOATAttack": {
+                        "red_team_model_type": "test.Repeat",
+                        "red_team_model_name": "",
+                        "early_stop_on": "all",
+                    }
+                }
+            }
+        }
+        probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=config)
+
+        attempt = self._make_attempt_with_outputs(probe)
+        with patch.object(
+            probe, "_should_terminate_conversation", return_value=[True, True]
+        ):
+            processed = probe._postprocess_attempt(attempt)
+
+        assert processed.notes["is_adversarial"] is True
+
+    def test_early_stop_on_all_continues_non_terminated_branches(self):
+        """With early_stop_on='all', non-jailbroken branches continue to next turn."""
+        config = {
+            "probes": {
+                "goat": {
+                    "GOATAttack": {
+                        "red_team_model_type": "test.Repeat",
+                        "red_team_model_name": "",
+                        "early_stop_on": "all",
+                    }
+                }
+            }
+        }
+        probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=config)
+        probe.attacker_model = Mock()
+        probe.attacker_model.generate.return_value = [
+            garak.attempt.Message(
+                "Observation: test\nThought: test\nStrategy: test\nResponse: next prompt"
+            )
+        ]
+
+        attempt = self._make_attempt_with_outputs(probe)
+        attempt.notes["_should_terminate"] = [False, True]
+
+        next_attempts = probe._generate_next_attempts(attempt)
+        # "all" mode: only the non-terminated branch continues
+        assert len(next_attempts) == 1
+
+    def test_invalid_early_stop_on_raises(self):
+        """Invalid early_stop_on value raises GarakException."""
+        config = {
+            "probes": {
+                "goat": {
+                    "GOATAttack": {
+                        "red_team_model_type": "test.Repeat",
+                        "red_team_model_name": "",
+                        "early_stop_on": "invalid",
+                    }
+                }
+            }
+        }
+        with pytest.raises(GarakException, match="Unsupported early_stop_on"):
+            _plugins.load_plugin("probes.goat.GOATAttack", config_root=config)
+
+    def test_any_mode_cross_attempt_stops_sibling_attempts(self):
+        """With early_stop_on='any', once a goal is achieved by one attempt,
+        sibling attempts for the same goal should not generate next-turn attempts."""
+        config = {
+            "probes": {
+                "goat": {
+                    "GOATAttack": {
+                        "red_team_model_type": "test.Repeat",
+                        "red_team_model_name": "",
+                        "early_stop_on": "any",
+                    }
+                }
+            }
+        }
+        probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=config)
+        probe.attacker_model = Mock()
+        probe.attacker_model.generate.return_value = [
+            garak.attempt.Message(
+                "Observation: test\nThought: test\nStrategy: test\nResponse: next prompt"
+            )
+        ]
+
+        # Simulate: a sibling attempt for this goal already jailbroken
+        probe._achieved_goals.add("Test goal")
+
+        # This attempt had no jailbreaks, but a sibling already achieved the goal
+        attempt = self._make_attempt_with_outputs(probe)
+        attempt.notes["_should_terminate"] = [False, False]
+
+        next_attempts = probe._generate_next_attempts(attempt)
+        # Should return empty — goal already achieved by sibling
+        assert next_attempts == []
+
+    def test_any_mode_postprocess_records_achieved_goal(self):
+        """_postprocess_attempt records goal in _achieved_goals when any branch jailbreaks."""
+        config = {
+            "probes": {
+                "goat": {
+                    "GOATAttack": {
+                        "red_team_model_type": "test.Repeat",
+                        "red_team_model_name": "",
+                        "early_stop_on": "any",
+                    }
+                }
+            }
+        }
+        probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=config)
+
+        attempt = self._make_attempt_with_outputs(probe)
+        assert "Test goal" not in probe._achieved_goals
+
+        # Simulate: one branch jailbroken
+        with patch.object(
+            probe, "_should_terminate_conversation", return_value=[True, False]
+        ):
+            probe._postprocess_attempt(attempt)
+
+        assert "Test goal" in probe._achieved_goals
+
+    def test_all_mode_does_not_use_achieved_goals(self):
+        """With early_stop_on='all', _achieved_goals is NOT used to stop sibling attempts."""
+        config = {
+            "probes": {
+                "goat": {
+                    "GOATAttack": {
+                        "red_team_model_type": "test.Repeat",
+                        "red_team_model_name": "",
+                        "early_stop_on": "all",
+                    }
+                }
+            }
+        }
+        probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=config)
+        probe.attacker_model = Mock()
+        probe.attacker_model.generate.return_value = [
+            garak.attempt.Message(
+                "Observation: test\nThought: test\nStrategy: test\nResponse: next prompt"
+            )
+        ]
+
+        # Even if a sibling achieved the goal, "all" mode ignores this
+        probe._achieved_goals.add("Test goal")
+
+        attempt = self._make_attempt_with_outputs(probe)
+        attempt.notes["_should_terminate"] = [False, False]
+
+        next_attempts = probe._generate_next_attempts(attempt)
+        # "all" mode continues — both branches should generate next attempts
+        assert len(next_attempts) == 2
+
+    def test_max_turns_marks_adversarial_regardless_of_mode(self):
+        """Both modes mark adversarial at max_calls_per_conv, even with no jailbreaks."""
+        for mode in ("any", "all"):
+            config = {
+                "probes": {
+                    "goat": {
+                        "GOATAttack": {
+                            "red_team_model_type": "test.Repeat",
+                            "red_team_model_name": "",
+                            "early_stop_on": mode,
+                            "max_calls_per_conv": 1,
+                        }
+                    }
+                }
+            }
+            probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=config)
+            attempt = self._make_attempt_with_outputs(probe)
+            # Turn 1 = max_calls_per_conv, no jailbreaks
+            with patch.object(
+                probe, "_should_terminate_conversation", return_value=[False, False]
+            ):
+                processed = probe._postprocess_attempt(attempt)
+
+            assert processed.notes["is_adversarial"] is True, (
+                f"early_stop_on='{mode}' should mark adversarial at max turns"
+            )
 
 
 class TestGOATPromptTemplates:

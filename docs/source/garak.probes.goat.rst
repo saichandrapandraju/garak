@@ -21,6 +21,10 @@ Uses the following options from ``_config.plugins.probes["goat"]``:
 * ``attack_hf_dataset_load_kwargs`` - kwargs to pass to HF `load_dataset` function.
 * ``attack_hf_dataset_column`` - column in HF dataset to use for attack goals.
 * ``num_goals`` - random number of attack goals to use (out of all goals from the HF dataset and custom goals (if provided)). If -1, uses all. 
+* ``early_stop_on`` - When to mark an attempt as adversarial and stop the attack for a goal (only relevant when ``generations > 1``):
+
+  - ``"any"`` (default): The attack_goal is considered achieved as soon as **any** generation branch is jailbroken. All remaining branches are terminated and every output at that turn is evaluated by the detector.
+  - ``"all"``: The attempt is only marked adversarial when **all** generation branches have terminated. **WARNING**: if fewer than ``generations`` branches are jailbroken at a given turn, those jailbreaks are **invisible** to the detector — they are detected internally for early stopping but never evaluated. Only the final turn (when every branch has terminated or ``max_calls_per_conv`` is reached) is seen by the detector. Effectively, only instances where all ``generations`` branches are jailbroken at the same turn are captured.
 
 Attack Techniques
 -----------------

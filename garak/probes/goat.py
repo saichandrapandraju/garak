@@ -51,6 +51,17 @@ class GOATAttack(garak.probes.IterativeProbe):
         red_team_model_type: Generator type for attacker LLM
         red_team_model_name: Model name for attacker LLM
         end_condition: Early stopping mode ("verify" or "detector")
+        early_stop_on: When to mark an attempt as adversarial ("any" or "all").
+            Only relevant when generations > 1.
+            "any" (default): Mark adversarial as soon as any generation branch
+            is jailbroken. All remaining branches are terminated — the attack_goal
+            is considered achieved. Every output at that turn is evaluated by the
+            detector.
+            "all": Only mark adversarial when ALL generation branches have
+            terminated. WARNING: jailbreaks on fewer than `generations` branches
+            at a given turn are INVISIBLE to the detector — they are detected
+            internally for early stopping but never evaluated by the detector.
+            Only the final turn is seen by the detector.
 
     Prompt Customization (for different attacker models or styles):
         custom_system_prompt: Override the attacker system prompt
@@ -83,6 +94,19 @@ class GOATAttack(garak.probes.IterativeProbe):
     DEFAULT_PARAMS = garak.probes.IterativeProbe.DEFAULT_PARAMS | {
         "max_calls_per_conv": 5,
         "end_condition": "verify",
+        # Early stop strategy (only relevant when generations > 1):
+        #   "any" (default) — attack_goal is achieved as soon as at least one
+        #       generation branch is jailbroken. All remaining branches are
+        #       terminated and every output at that turn is evaluated by the
+        #       detector (jailbroken ones score as FAIL, refusals as PASS).
+        #   "all" — the attempt is only marked adversarial when ALL generation
+        #       branches have terminated. WARNING: if only some branches are
+        #       jailbroken at a given turn (fewer than `generations`), those
+        #       jailbreaks are INVISIBLE to the detector — they are detected
+        #       internally for early stopping but never evaluated. Only the
+        #       final turn (when every branch has terminated or max_calls_per_conv
+        #       is reached) is seen by the detector.
+        "early_stop_on": "any",
         # Attacker LLM configuration
         "red_team_model_type": "huggingface.Model",
         "red_team_model_name": "Qwen/Qwen3-4B-Thinking-2507",
@@ -109,7 +133,18 @@ class GOATAttack(garak.probes.IterativeProbe):
     def __init__(self, config_root=_config):
         self.attacker_model = None
         self.detector = None  # For end_condition="detector" mode
+        # Track goals that have already been jailbroken (for cross-attempt
+        # early stopping). When early_stop_on="any" and a goal is achieved in
+        # one attempt, sibling attempts for the same goal at the same turn may
+        # already be queued. This set lets _generate_next_attempts skip them.
+        self._achieved_goals: set = set()
         super().__init__(config_root=config_root)
+
+        # Validate early_stop_on
+        if self.early_stop_on not in ("any", "all"):
+            raise GarakException(
+                f"Unsupported early_stop_on '{self.early_stop_on}'. Use 'any' or 'all'."
+            )
 
         # Load prompt templates from data files
         self._load_prompt_templates()
@@ -121,7 +156,8 @@ class GOATAttack(garak.probes.IterativeProbe):
         self._load_attacker()
         logging.info(
             f"goat.GOATAttack: Initialized with {len(self.attack_goals)} goals, "
-            f"max_calls_per_conv={self.max_calls_per_conv}, end_condition={self.end_condition}"
+            f"max_calls_per_conv={self.max_calls_per_conv}, end_condition={self.end_condition}, "
+            f"early_stop_on={self.early_stop_on}"
         )
 
     def _load_prompt_templates(self):
@@ -340,27 +376,65 @@ class GOATAttack(garak.probes.IterativeProbe):
 
         Note: we cache should_terminate in attempt.notes so _generate_next_attempts
         uses the same result.
+
+        The ``early_stop_on`` parameter controls when an attempt is marked adversarial
+        (only relevant when ``generations > 1``):
+        - ``"any"`` (default): Mark adversarial as soon as **any** branch is
+          jailbroken. All remaining branches are also terminated (no further turns
+          for this goal). Every output at this turn is evaluated by the detector.
+        - ``"all"``: Mark adversarial only when **all** branches have terminated.
+          **WARNING**: if fewer than ``generations`` branches are jailbroken at a
+          given turn, those jailbreaks are **invisible** to the detector — they are
+          detected internally for early stopping but never formally evaluated.
+          Only the final turn (all terminated or max turns reached) is seen by the
+          detector.
         """
         # Determine if this is the final turn before the deep copy
         should_terminate = self._should_terminate_conversation(this_attempt)
         # Turn number is tracked on the Conversation object, not attempt.notes
         current_turn = this_attempt.conversations[0].notes.get("turn", 1)
         is_last_possible_turn = current_turn >= self.max_calls_per_conv
-        any_continuing = any(not term for term in should_terminate)
+        any_terminated = any(should_terminate)
+        all_terminated = all(should_terminate)
 
         # Cache the termination decision so _generate_next_attempts uses the same result
         this_attempt.notes["_should_terminate"] = should_terminate
 
         # Set is_adversarial before parent's deep copy
-        # Final turn = either all conversations terminated OR we've hit max turns
-        if not any_continuing or is_last_possible_turn:
-            this_attempt.notes["is_adversarial"] = True
+        if self.early_stop_on == "any":
+            # Mark adversarial if ANY branch jailbroken or we've hit max turns.
+            # This ensures every jailbreak is evaluated by the detector.
+            is_adversarial = any_terminated or is_last_possible_turn
+        else:
+            # "all" mode: mark adversarial only when ALL branches are done.
+            is_adversarial = all_terminated or is_last_possible_turn
+
+            # Warn when "all" mode silently drops jailbreaks that the detector
+            # will never see: some branches jailbroken but not all.
+            if any_terminated and not all_terminated and not is_last_possible_turn:
+                n_jailbroken = sum(should_terminate)
+                n_total = len(should_terminate)
+                logging.warning(
+                    f"goat.GOATAttack: early_stop_on='all' — {n_jailbroken}/{n_total} "
+                    f"branches jailbroken at turn {current_turn} but attempt is NOT "
+                    f"marked adversarial. These jailbreaks will be invisible to the "
+                    f"detector. Set early_stop_on='any' to capture them."
+                )
+
+        this_attempt.notes["is_adversarial"] = is_adversarial
+        if is_adversarial:
             logging.debug(
                 f"goat.GOATAttack: Marked attempt {this_attempt.uuid} as adversarial "
-                f"(turn {current_turn})"
+                f"(turn {current_turn}, early_stop_on={self.early_stop_on})"
             )
-        else:
-            this_attempt.notes["is_adversarial"] = False
+
+        # Record achieved goals for cross-attempt coordination.
+        # When a jailbreak is found, sibling attempts for the same goal that
+        # were queued at the same turn should not generate further turns.
+        if any_terminated:
+            goal = this_attempt.notes.get("attack_goal", "")
+            if goal:
+                self._achieved_goals.add(goal)
 
         # Now call parent which will deep copy with our is_adversarial value
         return super()._postprocess_attempt(this_attempt)
@@ -506,6 +580,10 @@ class GOATAttack(garak.probes.IterativeProbe):
         This is called by IterativeProbe after each turn completes.
         Note: is_adversarial is set in _postprocess_attempt before this is called.
 
+        When ``early_stop_on="any"`` and any branch was jailbroken, no further
+        attempts are generated — the attack_goal is considered achieved and all
+        remaining branches are terminated to save compute.
+
         Args:
             last_attempt: The completed attempt with target's response
 
@@ -521,10 +599,32 @@ class GOATAttack(garak.probes.IterativeProbe):
         # Turn number is tracked on the Conversation object
         current_turn = last_attempt.conversations[0].notes.get("turn", 1)
         is_last_possible_turn = current_turn >= self.max_calls_per_conv
+        attack_goal = last_attempt.notes["attack_goal"]
+
+        # Cross-attempt coordination: if a sibling attempt for the same attack_goal
+        # already achieved a jailbreak (recorded in _achieved_goals by
+        # _postprocess_attempt), don't generate further turns for this attack_goal.
+        # This handles the case where multiple attempts for the same attack_goal
+        # execute at the same turn — one jailbreaks, the other hasn't yet.
+        if self.early_stop_on == "any" and attack_goal in self._achieved_goals:
+            logging.debug(
+                f"goat.GOATAttack: Attack goal already achieved by sibling attempt, "
+                f"skipping next turns for: {attack_goal[:50]}..."
+            )
+            return []
+
+        # In "any" mode, if any branch of THIS attempt was jailbroken the
+        # attack_goal is achieved. Stop all branches.
+        if self.early_stop_on == "any" and any(should_terminate):
+            logging.debug(
+                f"goat.GOATAttack: early_stop_on='any' — at least one branch "
+                f"terminated at turn {current_turn}, stopping all branches for goal: "
+                f"{attack_goal[:50]}..."
+            )
+            return []
 
         # Generate next turn attempts for non-terminated conversations
         next_attempts = []
-        goal = last_attempt.notes["attack_goal"]
         C_A = last_attempt.notes.get("attacker_conversation")
 
         for conversation, should_term in zip(last_attempt.conversations, should_terminate):
@@ -549,7 +649,7 @@ class GOATAttack(garak.probes.IterativeProbe):
 
             # Create followup prompt for attacker LLM
             followup_prompt = self.followup_prompt_template.format(
-                goal=goal,
+                goal=attack_goal,
                 adversarial_prev_prompt=last_prompt.text,
                 prev_model_response=last_response.text,
             )
@@ -564,7 +664,7 @@ class GOATAttack(garak.probes.IterativeProbe):
             adversarial_prompt, C_A = self._generate_adversarial_prompt(C_A)
             if adversarial_prompt is None:
                 logging.warning(
-                    f"goat.GOATAttack: No followup adversarial prompt for goal: {goal[:50]}..."
+                    f"goat.GOATAttack: No followup adversarial prompt for attack goal: {attack_goal[:50]}..."
                 )
                 continue
 
@@ -580,7 +680,7 @@ class GOATAttack(garak.probes.IterativeProbe):
             next_attempt = self._create_attempt(next_conversation)
             next_attempt.notes = next_attempt.notes or {}
             next_attempt.notes.update({
-                "attack_goal": goal,
+                "attack_goal": attack_goal,
                 "attacker_conversation": C_A,
                 "is_adversarial": False,
             })
