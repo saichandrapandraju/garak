@@ -390,6 +390,23 @@ class GOATAttack(garak.probes.IterativeProbe):
           Only the final turn (all terminated or max turns reached) is seen by the
           detector.
         """
+        # Early exit: if this goal was already achieved by a sibling attempt
+        # that was processed earlier in the same _execute_all batch, mark as
+        # non-adversarial to avoid inflating the metric with redundant
+        # evaluations.  We can't prevent the target call (base class already
+        # executed it), but we can prevent its results from being evaluated.
+        attack_goal = this_attempt.notes.get("attack_goal", "")
+        if self.early_stop_on == "any" and attack_goal in self._achieved_goals:
+            this_attempt.notes["is_adversarial"] = False
+            this_attempt.notes["_should_terminate"] = [True] * len(
+                this_attempt.outputs
+            )
+            logging.debug(
+                f"goat.GOATAttack: Goal already achieved, marking attempt "
+                f"{this_attempt.uuid} as non-adversarial to avoid metric inflation."
+            )
+            return super()._postprocess_attempt(this_attempt)
+
         # Determine if this is the final turn before the deep copy
         should_terminate = self._should_terminate_conversation(this_attempt)
         # Turn number is tracked on the Conversation object, not attempt.notes
@@ -433,9 +450,8 @@ class GOATAttack(garak.probes.IterativeProbe):
         # When a jailbreak is found, sibling attempts for the same goal that
         # were queued at the same turn should not generate further turns.
         if any_terminated:
-            goal = this_attempt.notes.get("attack_goal", "")
-            if goal:
-                self._achieved_goals.add(goal)
+            if attack_goal:
+                self._achieved_goals.add(attack_goal)
 
         # Now call parent which will deep copy with our is_adversarial value
         return super()._postprocess_attempt(this_attempt)

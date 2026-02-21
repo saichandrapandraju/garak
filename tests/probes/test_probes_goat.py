@@ -491,6 +491,25 @@ class TestEarlyStopOn:
 
         assert "Test goal" in probe._achieved_goals
 
+    def test_any_mode_postprocess_skips_already_achieved_goal(self):
+        """_postprocess_attempt marks is_adversarial=False for goals already in _achieved_goals.
+
+        This prevents metric inflation when a sibling attempt was queued at the
+        same turn (inline _generate_next_attempts) before the goal was achieved.
+        """
+        probe = _plugins.load_plugin("probes.goat.GOATAttack", config_root=GOAT_TEST_CONFIG)
+
+        # Pre-mark goal as already achieved (by a sibling attempt)
+        probe._achieved_goals.add("Test goal")
+
+        attempt = self._make_attempt_with_outputs(probe)
+        # Even though this attempt's outputs may contain jailbreaks,
+        # it should be marked non-adversarial because the goal is already achieved.
+        processed = probe._postprocess_attempt(attempt)
+
+        assert processed.notes["is_adversarial"] is False
+        assert processed.notes["_should_terminate"] == [True, True]
+
     def test_all_mode_does_not_use_achieved_goals(self):
         """With early_stop_on='all', _achieved_goals is NOT used to stop sibling attempts."""
         config = {
