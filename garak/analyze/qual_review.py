@@ -35,6 +35,13 @@ def build_tiers() -> dict:
 
     return tiers
 
+# Placeholder skeleton pre-implementation
+# def collect_data(report_path: str) -> dict:
+
+# def build_json(data: dict) -> dict:
+
+# def build_markdown(data: dict) -> str:
+
 
 def qual_review(report_path: str) -> None:
     tiers = build_tiers()
@@ -189,6 +196,19 @@ def main(argv=None) -> None:
         description="Qualitative review of failing/passing probes and detectors with sample prompts/responses",
         epilog="See https://github.com/NVIDIA/garak",
         allow_abbrev=False,
+    )
+    parser.add_argument(
+        "-j",
+        "--json_output",
+        required=False,
+        action="store_true",
+        help="Utilize JSON output for this review",
+    )
+    parser.add_argument(
+        "-o",
+        "--output_path",
+        required=False,
+        help="Output path for review",
     )
     parser.add_argument(
         "-r",
