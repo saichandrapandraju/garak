@@ -35,13 +35,6 @@ def build_tiers() -> dict:
 
     return tiers
 
-# Placeholder skeleton pre-implementation
-# def collect_data(report_path: str) -> dict:
-
-# def build_json(data: dict) -> dict:
-
-# def build_markdown(data: dict) -> str:
-
 
 def qual_review(report_path: str) -> None:
     tiers = build_tiers()
@@ -200,7 +193,6 @@ def main(argv=None) -> None:
     parser.add_argument(
         "-j",
         "--json_output",
-        required=False,
         action="store_true",
         help="Utilize JSON output for this review",
     )
