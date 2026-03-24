@@ -9,6 +9,7 @@
 # takes report.jsonl, optional bag.json (e.g. data/calibration/calibration.json) as input
 
 from collections import defaultdict
+from contextlib import redirect_stdout
 import json
 import random
 import sys
@@ -150,6 +151,73 @@ def build_review(report_path: str) -> dict:
         "not_processed": not_processed,
     }
 
+def output_json(review_data: dict) -> str:
+    return json.dumps(review_data, ensure_ascii=False)
+
+def output_markdown(review_data: dict) -> str:
+    lines = []
+    lines.append("# garak Qualitative review")
+    lines.append(
+        "Analysis of failing & passing probes/detectors, grouped by tier, including prompt & response samples for failing entries"
+    )
+    lines.append(f"source filename: {review_data['source_filename']}\n")
+
+    def _format_examples(title, examples):
+        res = [f"\n#### {title}"]
+        # We can shuffle the excerpt here to maintain previous random behavior
+        excerpt = list(examples)
+        random.shuffle(excerpt)
+        for index, entry in enumerate(excerpt):
+            if "failing" in title.lower():
+                res.append(f"##### Example {index+1}\n")
+            else:
+                res.append("")
+            res.append(f"  * **prompt**:\n```\n{repr(entry[0])}\n```\n")
+            if len(entry) == 3:
+                res.append(f"  * **trigger**:\n```\n{repr(entry[2])}\n```\n")
+            res.append(f"  * **response**:\n```\n{repr(entry[1])}\n```\n")
+        return "\n".join(res)
+
+    lines.append("## Tier 1 probe results")
+    for result in review_data["tier_1_probe_results"]:
+        lines.append(f"\n### Probe and detector: {result['probe_detector']}")
+        lines.append(f"\n\n * passrate: `{result['passrate']:0.4f}`")
+        lines.append(f" * z: `{result['z']}`\n\n")
+
+        if result.get("issues"):
+            lines.append("Issues found:")
+            for issue in result["issues"]:
+                if "pass rate" in issue:
+                    lines.append(f"* low pass rate `{result['passrate']:0.4f}`")
+                elif "low z" in issue:
+                    lines.append(f"* low z         `{result['z']:-0.4f}`")
+            lines.append(_format_examples("Examples of responses marked failing", result["failing_examples"]))
+            lines.append(_format_examples("Examples of responses marked passing", result["passing_examples"]))
+        else:
+            lines.append("All performance within bounds")
+
+    lines.append("\n## Tier 2 probe results")
+    for result in review_data["tier_2_probe_results"]:
+        lines.append(f"\n### Probe and detector: {result['probe_detector']}")
+        lines.append(f"\n\n * passrate: `{result['passrate']:0.4f}`")
+        lines.append(f" * z: `{result['z']}`\n\n")
+
+        if result.get("issues"):
+            lines.append("Issues found:")
+            for issue in result["issues"]:
+                if "low z" in issue:
+                    lines.append(f"* low z   `{result['z']:-0.4f}`")
+            lines.append(_format_examples("Examples of responses marked failing", result["failing_examples"]))
+            lines.append(_format_examples("Examples of responses marked passing", result["passing_examples"]))
+        else:
+            lines.append("All performance within bounds")
+
+    lines.append("\n## Probe/detector pairs not processed:")
+    for entry in review_data["not_processed"]:
+        lines.append(f"* {entry}")
+
+    return "\n".join(lines)
+
 
 def main(argv=None) -> None:
     if argv is None:
@@ -158,9 +226,7 @@ def main(argv=None) -> None:
     import argparse
 
     garak._config.load_config()
-    print(
-        f"garak {garak.__description__} v{garak._config.version} ( https://github.com/NVIDIA/garak )"
-    )
+    banner = f"garak {garak.__description__} v{garak._config.version} ( https://github.com/NVIDIA/garak )"
 
     parser = argparse.ArgumentParser(
         prog="python -m garak.analyze.qual_review",
@@ -197,8 +263,23 @@ def main(argv=None) -> None:
         parser.error("a report path is required (positional or -r/--report_path)")
 
     sys.stdout.reconfigure(encoding="utf-8")
+
     review_data = build_review(report_path)
-    print(review_data)
+    if args.json_output:
+        payload = output_json(review_data)
+        if args.output_path:
+            with open(args.output_path, "w", encoding="utf-8") as outfile:
+                outfile.write(payload)
+        else:
+            print(payload)
+    elif args.output_path:
+        with open(args.output_path, "w", encoding="utf-8") as outfile:
+            with redirect_stdout(outfile):
+                print(banner)
+                print(output_markdown(review_data))
+    else:
+        print(banner)
+        print(output_markdown(review_data))
 
 
 if __name__ == "__main__":
