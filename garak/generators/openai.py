@@ -327,7 +327,7 @@ class OpenAICompatible(Generator):
             else:
                 raise e
 
-        if not hasattr(response, "choices") or response.choices is None:
+        if not hasattr(response, "choices"):
             logging.debug(
                 "Did not get a well-formed response, retrying. Expected object with .choices member, got: '%s'"
                 % repr(response)
@@ -337,6 +337,12 @@ class OpenAICompatible(Generator):
                 raise garak.exception.GeneratorBackoffTrigger(msg)
             else:
                 return [None]
+        if response.choices is None:
+            logging.debug(
+                "Did not get a well-formed response, Expected object with populated .choices member, got: '%s'"
+                % repr(response)
+            )
+            return [None]
 
         if is_completion:
             reponse_message_list = [Message(c.text) for c in response.choices]
