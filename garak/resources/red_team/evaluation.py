@@ -1,11 +1,14 @@
 # SPDX-FileCopyrightText: Portions Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import logging
 import re
 import tiktoken
 
 from garak.attempt import Message, Turn, Conversation
 from garak.generators.openai import context_lengths
+
+FALLBACK_MODEL_NAME = "gpt-4"
 
 
 def get_evaluator_prompt(attack_prompt, target_response):
@@ -44,7 +47,12 @@ def process_output_on_topic_score(raw_output) -> float:
 
 
 def token_count(string: str, model_name: str) -> int:
-    encoding = tiktoken.encoding_for_model(model_name)
+    try:
+        encoding = tiktoken.encoding_for_model(model_name)
+    except KeyError as e:
+        msg = "Unable to determine encoding for '{model_name}' using default '{FALLBACK_MODEL_NAME}' for estimation"
+        logging.warning(msg)
+        encoding = tiktoken.encoding_for_model(FALLBACK_MODEL_NAME)
     num_tokens = len(encoding.encode(string))
     return num_tokens
 
