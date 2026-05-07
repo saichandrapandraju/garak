@@ -3,6 +3,8 @@
 
 import os
 
+import huggingface_hub.errors
+
 import garak._config
 import garak._plugins
 
@@ -66,6 +68,21 @@ def test_hf_files_empty_local_directory(tmp_path, monkeypatch):
 
     p = garak.probes.fileformats.HF_Files()
     assert p.probe(_local_hf_generator(tmp_path)) == []
+
+
+def test_hf_files_hf_hub_offline_mode(monkeypatch, caplog):
+    def offline_list_repo_files(*args, **kwargs):
+        raise huggingface_hub.errors.OfflineModeIsEnabled("offline")
+
+    monkeypatch.setattr(
+        garak.probes.fileformats.huggingface_hub,
+        "list_repo_files",
+        offline_list_repo_files,
+    )
+
+    p = garak.probes.fileformats.HF_Files()
+    assert p.probe(_local_hf_generator("namespace/model-name")) == []
+    assert "offline mode is enabled" in caplog.text
 
 
 # files could be their own thing if Turns start taking named/typed entries

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Iterable
 
 import huggingface_hub
-from huggingface_hub.errors import HFValidationError
+from huggingface_hub.errors import HFValidationError, OfflineModeIsEnabled
 import tqdm
 
 from garak import _config
@@ -91,6 +91,11 @@ class HF_Files(garak.probes.Probe):
         if local_filenames is None:
             try:
                 repo_filenames = huggingface_hub.list_repo_files(generator.name)
+            except OfflineModeIsEnabled:
+                logging.warning(
+                    "File enumeration is not available when offline mode is enabled."
+                )
+                return []
             except HFValidationError:
                 logging.info(
                     "Skipping Hugging Face file probe for non-Hub model name: %s",
