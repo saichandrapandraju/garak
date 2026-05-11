@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Portions Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-import logging
 import re
 import tiktoken
 
@@ -50,8 +49,6 @@ def token_count(string: str, model_name: str) -> int:
     try:
         encoding = tiktoken.encoding_for_model(model_name)
     except KeyError as e:
-        msg = "Unable to determine encoding for '{model_name}' using default '{FALLBACK_MODEL_NAME}' for estimation"
-        logging.warning(msg)
         encoding = tiktoken.encoding_for_model(FALLBACK_MODEL_NAME)
     num_tokens = len(encoding.encode(string))
     return num_tokens
