@@ -29,6 +29,7 @@ Due to the nature of the project, there is a lot of potentially harmful or dange
 - Don't add tests for default values given in configurable plugins
 - Don't add tests for functionality already covered by tests of parent classes
 - Add descriptive strings to asserts, explaining the expect underlying behaviour; be terse
+- Check that tests work
 
 ## Code primitives
 - Avoid updating `attempt` or any base classes (`probes.base.*`, `generators.base.*`, `detectors.base.*`) frivolously.
