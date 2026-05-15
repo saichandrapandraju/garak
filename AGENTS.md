@@ -26,6 +26,9 @@ Due to the nature of the project, there is a lot of potentially harmful or dange
 - Add tests as you go.
 - Tests for specific modules should go in a new file. For example, tests for `garak.probes.xyz` should go in `tests/probes/test_probe_xyz.py`.
 - ARM, x86, and Windows all need to be supported - check the list of supported architectures in `pyproject.toml`.
+- Don't add tests for default values given in configurable plugins
+- Don't add tests for functionality already covered by tests of parent classes
+- Add descriptive strings to asserts, explaining the expect underlying behaviour; be terse
 
 ## Code primitives
 - Avoid updating `attempt` or any base classes (`probes.base.*`, `generators.base.*`, `detectors.base.*`) frivolously.
